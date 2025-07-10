@@ -204,21 +204,46 @@
       }
     }
 
-    function generateLadder() {
-      ladderRungs = [];
-      const used = new Set();
-      const gapX = canvas.width/(numPlayers+1);
-      const stepY= canvas.height/(numPlayers*2);
-      for (let c=0;c<numPlayers-1;c++){
-        for (let r=0;r<numPlayers*2-1;r++){
-          if(Math.random()<0.4 && !used.has(r)){
-            used.add(r);
-            ladderRungs.push({startX:gapX*(c+1), endX:gapX*(c+2), y:stepY*(r+1), startCol:c, endCol:c+1});
-          }
+  // 사다리 구조 생성 함수 (열마다 최소 1개 발판 보장)
+  function generateLadder() {
+    ladderRungs = [];
+    const usedRows = new Set();
+    const gapX  = canvas.width  / (numPlayers + 1);
+    const stepY = canvas.height / (numPlayers * 2);
+
+    // 1) 랜덤 발판 생성
+    for (let c = 0; c < numPlayers - 1; c++) {
+      for (let r = 0; r < numPlayers * 2 - 1; r++) {
+        if (Math.random() < 0.4 && !usedRows.has(r)) {
+          usedRows.add(r);
+          ladderRungs.push({
+            startX:   gapX * (c + 1),
+            endX:     gapX * (c + 2),
+            y:        stepY * (r + 1),
+            startCol: c,
+            endCol:   c + 1
+          });
         }
       }
-      ladderGenerated=true;
     }
+
+    // 2) 열마다 최소 1개 발판 보장
+    for (let c = 0; c < numPlayers - 1; c++) {
+      if (!ladderRungs.some(r => r.startCol === c)) {
+        // 해당 열에 발판이 하나도 없다면 랜덤 행 하나 추가
+        const r = Math.floor(Math.random() * (numPlayers * 2 - 1));
+        ladderRungs.push({
+          startX:   gapX * (c + 1),
+          endX:     gapX * (c + 2),
+          y:        stepY * (r + 1),
+          startCol: c,
+          endCol:   c + 1
+        });
+      }
+    }
+
+    ladderGenerated = true;
+  }
 
     function drawStaticLadder() {
       ctx.clearRect(0,0,canvas.width,canvas.height);
