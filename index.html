@@ -104,9 +104,7 @@
       margin: 1.5rem 0;
       display: block;
     }
-    .results-section {
-      margin-top: 2rem;
-    }
+    .results-section { margin-top: 2rem; }
     .results-section h2 {
       font-size: 1.5rem;
       margin-bottom: 1rem;
@@ -129,9 +127,7 @@
       margin-bottom: 1rem;
       display: none;
     }
-    .message-box.show {
-      display: block;
-    }
+    .message-box.show { display: block; }
   </style>
 </head>
 <body>
@@ -157,7 +153,239 @@
     </div>
   </div>
   <script>
-    // (기존 JS 스크립트 유지)
+    const canvas = document.getElementById('ladderCanvas');
+    const ctx = canvas.getContext('2d');
+    const playerInputsDiv = document.getElementById('playerInputs');
+    const outcomeInputsDiv = document.getElementById('outcomeInputs');
+    const addPlayerBtn = document.getElementById('addPlayerBtn');
+    const removePlayerBtn = document.getElementById('removePlayerBtn');
+    const addOutcomeBtn = document.getElementById('addOutcomeBtn');
+    const removeOutcomeBtn = document.getElementById('removeOutcomeBtn');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const resetGameBtn = document.getElementById('resetGameBtn');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsList = document.getElementById('resultsList');
+    const messageBox = document.getElementById('messageBox');
+
+    let numPlayers = 3;
+    let numOutcomes = 3;
+    let ladderRungs = [];
+    let ladderGenerated = false;
+    let animationId = null;
+
+    function showMessage(message, type = 'error') {
+      messageBox.textContent = message;
+      messageBox.className = `message-box show ${type}`;
+      clearTimeout(messageBox.hideTimeout);
+      messageBox.hideTimeout = setTimeout(() => {
+        messageBox.classList.remove('show');
+      }, 3000);
+    }
+
+    function updatePlayerInputs() {
+      playerInputsDiv.innerHTML = '';
+      for (let i = 0; i < numPlayers; i++) {
+        const div = document.createElement('div');
+        div.className = 'input-group';
+        div.innerHTML = `
+          <label for="player${i+1}">참가자 ${i+1}</label>
+          <input type="text" id="player${i+1}" placeholder="이름 입력" value="참가자 ${i+1}">
+        `;
+        playerInputsDiv.appendChild(div);
+      }
+    }
+
+    function updateOutcomeInputs() {
+      outcomeInputsDiv.innerHTML = '';
+      for (let i = 0; i < numOutcomes; i++) {
+        const div = document.createElement('div');
+        div.className = 'input-group';
+        div.innerHTML = `
+          <label for="outcome${i+1}">결과 ${i+1}</label>
+          <input type="text" id="outcome${i+1}" placeholder="결과 입력" value="결과 ${i+1}">
+        `;
+        outcomeInputsDiv.appendChild(div);
+      }
+    }
+
+    function generateLadder() {
+      ladderRungs = [];
+      const used = new Set();
+      const gapX = canvas.width / (numPlayers + 1);
+      const stepY = canvas.height / (numPlayers * 2);
+      for (let c = 0; c < numPlayers - 1; c++) {
+        for (let r = 0; r < numPlayers * 2 - 1; r++) {
+          if (Math.random() < 0.4 && !used.has(r)) {
+            used.add(r);
+            ladderRungs.push({
+              startX: gapX * (c + 1),
+              endX:   gapX * (c + 2),
+              y:      stepY * (r + 1),
+              startCol: c,
+              endCol:   c + 1
+            });
+          }
+        }
+      }
+      ladderGenerated = true;
+    }
+
+    function drawStaticLadder() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const gapX = canvas.width / (numPlayers + 1);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#607d8b';
+      for (let i = 0; i < numPlayers; i++) {
+        ctx.beginPath();
+        ctx.moveTo(gapX * (i + 1), 0);
+        ctx.lineTo(gapX * (i + 1), canvas.height);
+        ctx.stroke();
+      }
+      ladderRungs.forEach(r => {
+        ctx.beginPath();
+        ctx.moveTo(r.startX, r.y);
+        ctx.lineTo(r.endX, r.y);
+        ctx.stroke();
+      });
+    }
+
+    function getPlayerPaths() {
+      const gapX = canvas.width / (numPlayers + 1);
+      const stepY = canvas.height / (numPlayers * 2);
+      const paths = [];
+      for (let i = 0; i < numPlayers; i++) {
+        let x = gapX * (i + 1), y = 0, col = i;
+        const path = [{ x, y }];
+        while (y + stepY < canvas.height) {
+          const rung = ladderRungs.find(r => Math.abs(r.y - y) < 1e-1 && (r.startCol === col || r.endCol === col));
+          if (rung) {
+            col = rung.startCol === col ? rung.endCol : rung.startCol;
+            x = gapX * (col + 1);
+            path.push({ x, y });
+          }
+          y += stepY;
+          path.push({ x, y });
+        }
+        if (path[path.length - 1].y !== canvas.height) path.push({ x, y: canvas.height });
+        paths.push(path);
+      }
+      return paths;
+    }
+
+    function drawBall(x, y, idx) {
+      ctx.beginPath();
+      ctx.arc(x, y, 8, 0, Math.PI*2);
+      const colors = ['#ef5350','#ab47bc','#42a5f5','#66bb6a','#ffee58','#ff7043'];
+      ctx.fillStyle = colors[idx % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = '#263238';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    function animatePaths(paths) {
+      cancelAnimationFrame(animationId);
+      const positions = paths.map(p => ({ x: p[0].x, y: p[0].y }));
+      const indices = Array(numPlayers).fill(0);
+      const speed = 5;
+      resultsList.innerHTML = '';
+      resultsSection.style.display = 'none';
+      [startGameBtn, resetGameBtn, addPlayerBtn, removePlayerBtn, addOutcomeBtn, removeOutcomeBtn]
+        .forEach(b => b.disabled = true);
+      function step() {
+        drawStaticLadder();
+        let done = true;
+        positions.forEach((pos, i) => {
+          const path = paths[i];
+          if (indices[i] < path.length - 1) {
+            done = false;
+            const next = path[indices[i]+1];
+            const dx = next.x - pos.x, dy = next.y - pos.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < speed) { pos.x = next.x; pos.y = next.y; indices[i]++; }
+            else { pos.x += dx/dist*speed; pos.y += dy/dist*speed; }
+          }
+          drawBall(pos.x, pos.y, i);
+        });
+        if (!done) animationId = requestAnimationFrame(step);
+        else {
+          displayResults(paths);
+          [startGameBtn, resetGameBtn, addPlayerBtn, removePlayerBtn, addOutcomeBtn, removeOutcomeBtn]
+            .forEach(b => b.disabled = false);
+        }
+      }
+      animationId = requestAnimationFrame(step);
+    }
+
+    function displayResults(paths) {
+      resultsList.innerHTML = '';
+      resultsSection.style.display = 'block';
+      const names = Array.from(playerInputsDiv.querySelectorAll('input')).map(i=>i.value);
+      const outs = Array.from(outcomeInputsDiv.querySelectorAll('input')).map(i=>i.value);
+      const gapX = canvas.width/(numPlayers+1);
+      names.forEach((name, i) => {
+        const finalX = paths[i][paths[i].length-1].x;
+        let idx = Math.round(finalX/gapX)-1;
+        idx = Math.max(0, Math.min(idx, outs.length-1));
+        const div = document.createElement('div');
+        div.className = 'result-item';
+        div.innerHTML = `<span><strong>${name}</strong></span><span>→ ${outs[idx]}</span>`;
+        resultsList.appendChild(div);
+      });
+    }
+
+    addPlayerBtn.addEventListener('click', () => {
+      if (numPlayers < 6) { numPlayers++; updatePlayerInputs(); ladderGenerated=false; generateLadder(); drawStaticLadder(); showMessage('참가자가 추가되었습니다.', 'info'); }
+      else showMessage('참가자는 최대 6명까지 가능합니다.');
+    });
+    removePlayerBtn.addEventListener('click', () => {
+      if (numPlayers > 2) { numPlayers--; updatePlayerInputs(); ladderGenerated=false; generateLadder(); drawStaticLadder(); showMessage('참가자가 제거되었습니다.', 'info'); }
+      else showMessage('참가자는 최소 2명 이상이어야 합니다.');
+    });
+    addOutcomeBtn.addEventListener('click', () => {
+      if (numOutcomes < 6) { numOutcomes++; updateOutcomeInputs(); ladderGenerated=false; generateLadder(); drawStaticLadder(); showMessage('결과가 추가되었습니다.', 'info'); }
+      else showMessage('결과는 최대 6개까지 가능합니다.');
+    });
+    removeOutcomeBtn.addEventListener('click', () => {
+      if (numOutcomes > 2) { numOutcomes--; updateOutcomeInputs(); ladderGenerated=false; generateLadder(); drawStaticLadder(); showMessage('결과가 제거되었습니다.', 'info'); }
+      else showMessage('결과는 최소 2개 이상이어야 합니다.');
+    });
+
+    startGameBtn.addEventListener('click', () => {
+      const pns = Array.from(playerInputsDiv.querySelectorAll('input')).map(i=>i.value.trim());
+      const ons = Array.from(outcomeInputsDiv.querySelectorAll('input')).map(i=>i.value.trim());
+      if (pns.some(n=>!n) || ons.some(n=>!n)) { showMessage('모든 값을 입력해주세요.'); return; }
+      if (numPlayers !== numOutcomes) { showMessage('참가자 수와 결과 수가 같아야 합니다.'); return; }
+      if (!ladderGenerated) generateLadder();
+      animatePaths(getPlayerPaths());
+    });
+
+    resetGameBtn.addEventListener('click', () => {
+      cancelAnimationFrame(animationId);
+      numPlayers=numOutcomes=3;
+      ladderGenerated=false;
+      updatePlayerInputs();
+      updateOutcomeInputs();
+      drawStaticLadder();
+      resultsSection.style.display='none';
+    });
+
+    window.onload = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height= canvas.offsetHeight;
+      updatePlayerInputs();
+      updateOutcomeInputs();
+      generateLadder();
+      drawStaticLadder();
+    };
+    window.addEventListener('resize', () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height= canvas.offsetHeight;
+      ladderGenerated=false;
+      generateLadder();
+      drawStaticLadder();
+      resultsSection.style.display='none';
+    });
   </script>
 </body>
 </html>
