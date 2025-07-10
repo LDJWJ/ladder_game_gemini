@@ -385,102 +385,109 @@
             return paths;
         }
 
-        // Function to animate player paths
         function animatePaths(paths) {
-            cancelAnimationFrame(animationId); // Stop any previous animation
-            animationFrames = Array(numPlayers).fill(0);
-            resultsList.innerHTML = ''; // Clear previous results
-            resultsSection.style.display = 'none'; // Hide results until animation finishes
-
-            const animationSpeed = 5; // Pixels per frame
-
-            function animate() {
-                // Redraw the static ladder first
-                drawLadder();
-
-                let allFinished = true;
+            cancelAnimationFrame(animationId);
+        
+            // ▶ 플레이어별 “현재 위치”만 별도로 보관
+            const pos     = paths.map(p => ({ x: p[0].x, y: p[0].y }));
+            const segIdx  = Array(numPlayers).fill(0); // 현재 몇 번째 세그먼트?
+            const speed   = 5; // px/frame
+        
+            resultsList.innerHTML = '';
+            resultsSection.style.display = 'none';
+        
+            // 버튼 비활성화 (애니메이션 중)
+            [startGameBtn, resetGameBtn,
+             addPlayerBtn, removePlayerBtn,
+             addOutcomeBtn, removeOutcomeBtn].forEach(b => b.disabled = true);
+        
+            function step() {
+                drawLadder();                    // 사다리 다시 그림
+                let allDone = true;
+        
                 for (let i = 0; i < numPlayers; i++) {
-                    const path = paths[i];
-                    if (animationFrames[i] < path.length - 1) {
-                        allFinished = false;
-                        const currentPoint = path[animationFrames[i]];
-                        const nextPoint = path[animationFrames[i] + 1];
-
-                        // Calculate direction
-                        const dx = nextPoint.x - currentPoint.x;
-                        const dy = nextPoint.y - currentPoint.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-
-                        // Move step by step
-                        if (distance > animationSpeed) {
-                            const ratio = animationSpeed / distance;
-                            currentPoint.x += dx * ratio;
-                            currentPoint.y += dy * ratio;
-                        } else {
-                            // Reached next point, move to the next segment
-                            animationFrames[i]++;
-                        }
-
-                        // Draw animated circle for player
-                        ctx.beginPath();
-                        ctx.arc(currentPoint.x, currentPoint.y, 8, 0, Math.PI * 2);
-                        ctx.fillStyle = ['#ef5350', '#ab47bc', '#42a5f5', '#66bb6a', '#ffee58', '#ff7043'][i % 6]; // Vibrant colors
-                        ctx.fill();
-                        ctx.strokeStyle = '#263238';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
-                    } else if (animationFrames[i] === path.length - 1) {
-                        // Player reached the end, draw final circle
-                        const finalPoint = path[path.length - 1];
-                        ctx.beginPath();
-                        ctx.arc(finalPoint.x, finalPoint.y, 8, 0, Math.PI * 2);
-                        ctx.fillStyle = ['#ef5350', '#ab47bc', '#42a5f5', '#66bb6a', '#ffee58', '#ff7043'][i % 6];
-                        ctx.fill();
-                        ctx.strokeStyle = '#263238';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
+                    if (segIdx[i] >= paths[i].length - 1) {
+                        // 이미 끝에 도달 → 최종 원만 고정 표시
+                        const p = paths[i][paths[i].length - 1];
+                        drawBall(p.x, p.y, i);
+                        continue;
                     }
+        
+                    allDone = false;
+                    const cur = pos[i];
+                    const nxt = paths[i][segIdx[i] + 1];
+        
+                    const dx = nxt.x - cur.x;
+                    const dy = nxt.y - cur.y;
+                    const dist = Math.hypot(dx, dy);
+        
+                    if (dist <= speed) {
+                        // 다음 세그먼트로 진입
+                        pos[i].x = nxt.x;
+                        pos[i].y = nxt.y;
+                        segIdx[i]++;
+                    } else {
+                        // 한 프레임 이동
+                        const r = speed / dist;
+                        pos[i].x += dx * r;
+                        pos[i].y += dy * r;
+                    }
+        
+                    drawBall(pos[i].x, pos[i].y, i);
                 }
-
-                if (!allFinished) {
-                    animationId = requestAnimationFrame(animate);
+        
+                if (!allDone) {
+                    animationId = requestAnimationFrame(step);
                 } else {
-                    // All animations finished, display results
+                    // 애니메이션 종료 → 결과 출력 + 버튼 활성화
                     displayResults(paths);
+                    [startGameBtn, resetGameBtn,
+                     addPlayerBtn, removePlayerBtn,
+                     addOutcomeBtn, removeOutcomeBtn].forEach(b => b.disabled = false);
                 }
             }
-            animationId = requestAnimationFrame(animate);
+        
+            animationId = requestAnimationFrame(step);
         }
 
-        // ▼ 교체할 displayResults 함수
+// 공(원) 하나 그리는 헬퍼
+function drawBall(x, y, idx) {
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = ['#ef5350','#ab47bc','#42a5f5','#66bb6a','#ffee58','#ff7043'][idx % 6];
+    ctx.fill();
+    ctx.strokeStyle = '#263238';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+}
+        
         function displayResults(paths) {
             resultsList.innerHTML = '';
             resultsSection.style.display = 'block';
         
             const playerNames  = Array.from(playerInputsDiv.querySelectorAll('input'))
-                                      .map(input => input.value);
+                                      .map(inp => inp.value);
             const outcomeNames = Array.from(outcomeInputsDiv.querySelectorAll('input'))
-                                      .map(input => input.value);
+                                      .map(inp => inp.value);
         
-            // ① 각 참가자의 최종 X 좌표 수집
-            const finals = paths.map((path, idx) => ({
-                playerIdx : idx,
-                finalX    : path[path.length - 1].x
-            }));
+            const gap = canvas.width / (numPlayers + 1);  // 기둥 간격
         
-            // ② 왼쪽→오른쪽 순으로 정렬
-            finals.sort((a, b) => a.finalX - b.finalX);
+            playerNames.forEach((pName, i) => {
+                const finalX   = paths[i][paths[i].length - 1].x;
+                let   colIndex = Math.round(finalX / gap) - 1; // 0-based
         
-            // ③ 정렬된 순서대로 결과 매핑
-            finals.forEach(({ playerIdx }, rank) => {
+                // 안전 클램프
+                colIndex = Math.max(0, Math.min(colIndex, outcomeNames.length - 1));
+        
                 const resultItem = document.createElement('div');
                 resultItem.className = 'result-item';
                 resultItem.innerHTML =
-                    `<span><strong>${playerNames[playerIdx]}</strong></span> ` +
-                    `<span>→ ${outcomeNames[rank]}</span>`;
+                    `<span><strong>${pName}</strong></span> ` +
+                    `<span>→ ${outcomeNames[colIndex]}</span>`;
                 resultsList.appendChild(resultItem);
             });
         }
+        
         // Event Listeners
         addPlayerBtn.addEventListener('click', () => {
             if (numPlayers < 6) { // Max 6 players
