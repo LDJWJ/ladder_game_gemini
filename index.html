@@ -198,8 +198,8 @@
       outcomeInputsDiv.innerHTML = '';
       for (let i = 0; i < numOutcomes; i++) {
         const wrapper = document.createElement('div'); wrapper.className = 'input-group';
-        wrapper.innerHTML = `<label for=\`outcome${i+1}\`>결과 ${i+1}</label>` +
-                             `<input type=\"text\" id=\"outcome${i+1}\" value=\"결과 ${i+1}\" />`;
+        wrapper.innerHTML = `<label for=\`outcome${i+1}\`>발표순서 ${i+1}</label>` +
+                             `<input type=\"text\" id=\"outcome${i+1}\" value=\"발표순서 ${i+1}\" />`;
         outcomeInputsDiv.appendChild(wrapper);
       }
     }
