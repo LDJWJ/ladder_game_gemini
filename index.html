@@ -280,51 +280,48 @@
             }
         }
 
-        // Function to draw the ladder on canvas
         function drawLadder() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-
-            const playerGap = canvas.width / (numPlayers + 1);
-            const rungHeight = canvas.height / (numPlayers * 2); // More rungs for better game
-
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#607d8b'; // Blue-grey for ladder lines
-
-            // Draw vertical lines
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+            const playerGap  = canvas.width  / (numPlayers + 1);
+            const rungHeight = canvas.height / (numPlayers * 2);
+        
+            ctx.lineWidth   = 2;
+            ctx.strokeStyle = '#607d8b';
+        
+            // 1. 세로줄
             for (let i = 0; i < numPlayers; i++) {
                 ctx.beginPath();
                 ctx.moveTo(playerGap * (i + 1), 0);
                 ctx.lineTo(playerGap * (i + 1), canvas.height);
                 ctx.stroke();
             }
-
-            // Draw horizontal rungs
-            ladderRungs = []; // Reset rungs
-            for (let i = 0; i < numPlayers - 1; i++) { // For each gap between players
-                let rungsInColumn = [];
-                for (let j = 0; j < numPlayers * 2 - 1; j++) { // For each possible rung height
-                    if (Math.random() < 0.4) { // Probability of drawing a rung
-                        // Check if a rung already exists at the same height in the adjacent column
-                        let canDraw = true;
-                        if (i > 0 && rungsInColumn.includes(j)) { // Check left side
-                            canDraw = false;
-                        }
-                        if (canDraw) {
-                            rungsInColumn.push(j);
-                            const startX = playerGap * (i + 1);
-                            const endX = playerGap * (i + 2);
-                            const y = rungHeight * (j + 1);
-                            ctx.beginPath();
-                            ctx.moveTo(startX, y);
-                            ctx.lineTo(endX, y);
-                            ctx.stroke();
-                            ladderRungs.push({
-                                startCol: i,
-                                endCol: i + 1,
-                                y: y,
-                                heightIndex: j
-                            });
-                        }
+        
+            // 2. 가로줄 (행마다 최대 1개)
+            ladderRungs.length = 0;               // 초기화
+            const usedRows = new Set();            // 이미 막대가 그려진 행 저장
+        
+            for (let col = 0; col < numPlayers - 1; col++) {
+                for (let row = 0; row < numPlayers * 2 - 1; row++) {
+                    if (Math.random() < 0.4 && !usedRows.has(row)) {
+                        // 아직 해당 행(row)에 가로줄이 없다면 그리기
+                        usedRows.add(row);
+        
+                        const startX = playerGap * (col + 1);
+                        const endX   = playerGap * (col + 2);
+                        const y      = rungHeight * (row + 1);
+        
+                        ctx.beginPath();
+                        ctx.moveTo(startX, y);
+                        ctx.lineTo(endX, y);
+                        ctx.stroke();
+        
+                        ladderRungs.push({
+                            startCol: col,
+                            endCol  : col + 1,
+                            y,
+                            heightIndex: row
+                        });
                     }
                 }
             }
