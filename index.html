@@ -332,42 +332,54 @@
 
         // Function to get player paths
         function getPlayerPaths() {
-            const playerGap = canvas.width / (numPlayers + 1);
-            const rungHeight = canvas.height / (numPlayers * 2);
+            const playerGap  = canvas.width  / (numPlayers + 1);
+            const rungHeight = canvas.height / (numPlayers * 2);  // 세로 2n등분
+        
             const paths = [];
-
+        
             for (let i = 0; i < numPlayers; i++) {
-                let currentX = playerGap * (i + 1);
-                let currentY = 0;
+                let currentX      = playerGap * (i + 1);
+                let currentY      = 0;
                 let currentColumn = i;
+        
                 const path = [{ x: currentX, y: currentY }];
-
-                // Simulate movement down the ladder
-                while (currentY < canvas.height) {
+        
+                // ▶ y + rungHeight 가 높이를 넘지 않을 때까지만 진행
+                while (currentY + rungHeight < canvas.height) {
+                    // 1. 좌·우 가로막대가 있는지 확인
                     let movedHorizontally = false;
-                    // Check for rungs at current height
+        
                     for (const rung of ladderRungs) {
-                        if (Math.abs(rung.y - currentY) < rungHeight / 2) { // Close enough to a rung
-                            if (rung.startCol === currentColumn) { // Rung to the right
-                                currentX = playerGap * (rung.endCol + 1);
+                        // 현재 높이(rungHeight 단위)와 일치하는 가로막대만 검사
+                        if (Math.abs(rung.y - currentY) < 1e-1) {
+                            if (rung.startCol === currentColumn) {
+                                // 오른쪽으로 이동
+                                currentX      = playerGap * (rung.endCol + 1);
                                 currentColumn = rung.endCol;
-                                path.push({ x: currentX, y: rung.y });
                                 movedHorizontally = true;
-                                break;
-                            } else if (rung.endCol === currentColumn) { // Rung to the left
-                                currentX = playerGap * (rung.startCol + 1);
+                            } else if (rung.endCol === currentColumn) {
+                                // 왼쪽으로 이동
+                                currentX      = playerGap * (rung.startCol + 1);
                                 currentColumn = rung.startCol;
-                                path.push({ x: currentX, y: rung.y });
                                 movedHorizontally = true;
+                            }
+                            if (movedHorizontally) {
+                                path.push({ x: currentX, y: currentY });
                                 break;
                             }
                         }
                     }
-
-                    // Move down
+        
+                    // 2. 아래로 한 칸 내려오기
                     currentY += rungHeight;
                     path.push({ x: currentX, y: currentY });
                 }
+        
+                // 3. 꼭 맨 아래(canvas.height)에 한 번 더 스냅 → y 좌표가 정확히 경계선
+                if (path[path.length - 1].y !== canvas.height) {
+                    path.push({ x: currentX, y: canvas.height });
+                }
+        
                 paths.push(path);
             }
             return paths;
