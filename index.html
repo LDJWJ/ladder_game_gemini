@@ -171,8 +171,8 @@
     const resultsList = document.getElementById('resultsList');
     const messageBox = document.getElementById('messageBox');
 
-    let numPlayers = 3;
-    let numOutcomes = 3;
+    let numPlayers = 5;
+    let numOutcomes = 5;
     let ladderRungs = [];
     let ladderGenerated = false;
     let animationId = null;
@@ -249,9 +249,9 @@
 
     function displayResults(paths){resultsList.innerHTML='';resultsSection.style.display='block';const names=Array.from(playerInputsDiv.querySelectorAll('input')).map(i=>i.value);const outs=Array.from(outcomeInputsDiv.querySelectorAll('input')).map(i=>i.value);const gapX=canvas.width/(numPlayers+1);names.forEach((n,i)=>{const finalX=paths[i][paths[i].length-1].x;let idx=Math.round(finalX/gapX)-1;idx=Math.max(0,Math.min(idx,outs.length-1));const d=document.createElement('div');d.className='result-item';d.innerHTML=`<span><strong>${n}</strong></span><span>→ ${outs[idx]}</span>`;resultsList.appendChild(d);});}
 
-    addPlayerBtn.addEventListener('click',()=>{if(numPlayers<8){numPlayers++;updatePlayerInputs();generateLadder();drawStaticLadder();showMessage('참가자 추가');}else showMessage('최대 6명');});
+    addPlayerBtn.addEventListener('click',()=>{if(numPlayers<8){numPlayers++;updatePlayerInputs();generateLadder();drawStaticLadder();showMessage('참가자 추가');}else showMessage('최대 8명');});
     removePlayerBtn.addEventListener('click',()=>{if(numPlayers>2){numPlayers--;updatePlayerInputs();generateLadder();drawStaticLadder();showMessage('참가자 제거');}else showMessage('최소 2명');});
-    addOutcomeBtn.addEventListener('click',()=>{if(numOutcomes<6){numOutcomes++;updateOutcomeInputs();generateLadder();drawStaticLadder();showMessage('결과 추가');}else showMessage('최대 6개');});
+    addOutcomeBtn.addEventListener('click',()=>{if(numOutcomes<8){numOutcomes++;updateOutcomeInputs();generateLadder();drawStaticLadder();showMessage('결과 추가');}else showMessage('최대 8개');});
     removeOutcomeBtn.addEventListener('click',()=>{if(numOutcomes>2){numOutcomes--;updateOutcomeInputs();generateLadder();drawStaticLadder();showMessage('결과 제거');}else showMessage('최소 2개');});
 
     startGameBtn.addEventListener('click',()=>{const pns=Array.from(playerInputsDiv.querySelectorAll('input')).map(i=>i.value.trim());const ons=Array.from(outcomeInputsDiv.querySelectorAll('input')).map(i=>i.value.trim());if(pns.some(n=>!n)||ons.some(o=>!o)){showMessage('값 입력');return;}if(numPlayers!==numOutcomes){showMessage('수 불일치');return;}if(!ladderGenerated)generateLadder();animatePaths(getPlayerPaths());});
