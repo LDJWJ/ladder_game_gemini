@@ -440,34 +440,35 @@
             animationId = requestAnimationFrame(animate);
         }
 
-        // Function to display results
+        // ▼ 교체할 displayResults 함수
         function displayResults(paths) {
             resultsList.innerHTML = '';
             resultsSection.style.display = 'block';
-
-            const playerNames = Array.from(playerInputsDiv.querySelectorAll('input')).map(input => input.value);
-            const outcomeNames = Array.from(outcomeInputsDiv.querySelectorAll('input')).map(input => input.value);
-
-            // Determine final outcome for each player
-            const playerGap = canvas.width / (numPlayers + 1);
-            const outcomeWidth = canvas.width / numOutcomes;
-
-            const finalOutcomes = paths.map(path => {
-                const finalX = path[path.length - 1].x;
-                let outcomeIndex = Math.floor(finalX / outcomeWidth);
-                if (outcomeIndex >= numOutcomes) outcomeIndex = numOutcomes - 1; // Clamp to last outcome
-                if (outcomeIndex < 0) outcomeIndex = 0; // Clamp to first outcome
-                return outcomeNames[outcomeIndex];
-            });
-
-            playerNames.forEach((playerName, index) => {
+        
+            const playerNames  = Array.from(playerInputsDiv.querySelectorAll('input'))
+                                      .map(input => input.value);
+            const outcomeNames = Array.from(outcomeInputsDiv.querySelectorAll('input'))
+                                      .map(input => input.value);
+        
+            // ① 각 참가자의 최종 X 좌표 수집
+            const finals = paths.map((path, idx) => ({
+                playerIdx : idx,
+                finalX    : path[path.length - 1].x
+            }));
+        
+            // ② 왼쪽→오른쪽 순으로 정렬
+            finals.sort((a, b) => a.finalX - b.finalX);
+        
+            // ③ 정렬된 순서대로 결과 매핑
+            finals.forEach(({ playerIdx }, rank) => {
                 const resultItem = document.createElement('div');
                 resultItem.className = 'result-item';
-                resultItem.innerHTML = `<span><strong>${playerName}</strong></span> <span>→ ${finalOutcomes[index]}</span>`;
+                resultItem.innerHTML =
+                    `<span><strong>${playerNames[playerIdx]}</strong></span> ` +
+                    `<span>→ ${outcomeNames[rank]}</span>`;
                 resultsList.appendChild(resultItem);
             });
         }
-
         // Event Listeners
         addPlayerBtn.addEventListener('click', () => {
             if (numPlayers < 6) { // Max 6 players
