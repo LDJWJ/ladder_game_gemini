@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": [],
+    "ask": [
+      "FileRead(/mnt/d/Github/ladder_game_gemini/**)"
+    ]
+  }
+}
